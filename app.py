@@ -1,3 +1,5 @@
+# app.py
+
 import streamlit as st
 from create_story import create_story
 
@@ -22,7 +24,7 @@ if st.button("Generate Story"):
     else:
         with st.spinner("Generating story..."):
             try:
-                story = create_story(
+                result = create_story(
                     child_name=child_name,
                     child_age=child_age,
                     emotion_or_theme=emotion_or_theme,
@@ -31,6 +33,6 @@ if st.button("Generate Story"):
                     selected_books=selected_books
                 )
                 st.subheader("Your personalised story:")
-                st.write(story)
+                st.write(result["story"])
             except Exception as e:
                 st.error(f"Error generating story: {e}")

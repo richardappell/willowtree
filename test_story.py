@@ -7,3 +7,4 @@ with open("inputs/default_inputs.json") as f:
 story = create_story(inputs)
 print("\n" + "="*20 + "\nGenerated Story:\n")
 print(story)
+

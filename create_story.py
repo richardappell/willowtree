@@ -1,3 +1,5 @@
+# create_story.py
+
 import os
 import httpx
 
@@ -13,17 +15,21 @@ def extract_version_and_prompt():
     prompt_text = "".join(lines[1:]).strip()
     return version, prompt_text
 
-def create_story(user_inputs):
+def create_story(child_name, child_age, emotion_or_theme, tone, favourite_thing=None, selected_books=None):
     version, prompt_template = extract_version_and_prompt()
-    
-    full_prompt = f"""{prompt_template}
+
+    selected_books = selected_books or []
+    situation = emotion_or_theme
+
+    prompt = f"""{prompt_template}
 
 USER INPUTS:
-- Child's name: {user_inputs['child_name']}
-- Age: {user_inputs['child_age']}
-- Situation: {user_inputs['situation']}
-- Emotional tone: {user_inputs['tone']}
-- Favourite books: {', '.join(user_inputs['selected_books'])}
+- Child's name: {child_name}
+- Age: {child_age}
+- Situation: {situation}
+- Emotional tone: {tone}
+- Favourite books: {', '.join(selected_books)}
+- Favourite thing: {favourite_thing or "N/A"}
 """
 
     headers = {
@@ -37,7 +43,7 @@ USER INPUTS:
         "max_tokens": 1024,
         "temperature": 0.7,
         "messages": [
-            {"role": "user", "content": full_prompt}
+            {"role": "user", "content": prompt}
         ]
     }
 
@@ -46,4 +52,8 @@ USER INPUTS:
 
     story_text = response.json()["content"][0]["text"]
 
-    return version, full_prompt, story_text
+    return {
+        "version": version,
+        "prompt": prompt,
+        "story": story_text
+    }
