@@ -249,39 +249,77 @@ if st.button("✨ Create Story", type="primary", use_container_width=True):
                 
                 st.success("✅ Story created successfully!")
                 
+                # Store story details in session state for feedback
+                st.session_state.story_result = result
+                st.session_state.story_inputs = {
+                    "child_name": child_name,
+                    "date_of_birth": date_of_birth.strftime("%Y-%m-%d"),
+                    "calculated_age": result.get("calculated_age", calculated_age),
+                    "location": location,
+                    "selected_books": selected_books,
+                    "reading_time": reading_time,
+                    "emotional_themes": emotional_themes,
+                    "event_preparation": event_preparation,
+                    "favourite_thing": favourite_thing
+                }
+                
                 # Display the story
                 st.markdown("### 📖 Your personalized story:")
                 st.markdown("---")
                 st.write(result["story"])
                 st.markdown("---")
                 
-                # Log the story generation
-                if LOGGING_AVAILABLE:
-                    inputs = {
-                        "child_name": child_name,
-                        "date_of_birth": date_of_birth.strftime("%Y-%m-%d"),
-                        "calculated_age": result.get("calculated_age", calculated_age),
-                        "location": location,
-                        "selected_books": selected_books,
-                        "reading_time": reading_time,
-                        "emotional_themes": emotional_themes,
-                        "event_preparation": event_preparation,
-                        "favourite_thing": favourite_thing
-                    }
-                    
-                    try:
-                        log_story_run(
-                            version=result.get("version", "1.0"),
-                            inputs=inputs,
-                            prompt=result.get("prompt", ""),
-                            story=result["story"]
-                        )
-                        st.success("📝 Story logged successfully!")
-                    except Exception as log_error:
-                        st.error(f"❌ Logging failed: {log_error}")
-                
             except Exception as e:
                 st.error(f"❌ Error generating story: {e}")
+
+# Feedback Section (only show if story has been generated)
+if 'story_result' in st.session_state:
+    st.markdown("---")
+    st.header("📝 Share Your Feedback")
+    st.markdown(f"*How did {child_name or 'your child'} like this story?*")
+    
+    col1, col2 = st.columns([1, 2])
+    
+    with col1:
+        story_rating = st.select_slider(
+            "Story Rating",
+            options=[1, 2, 3, 4, 5],
+            value=3,
+            format_func=lambda x: f"{x} {'⭐' * x}"
+        )
+    
+    with col2:
+        feedback_text = st.text_area(
+            "Tell us more (optional)",
+            placeholder="What worked well? What could be improved? How did your child react?",
+            height=100
+        )
+    
+    if st.button("📤 Submit Feedback", type="secondary"):
+        if LOGGING_AVAILABLE:
+            try:
+                # Add feedback to the inputs
+                inputs_with_feedback = st.session_state.story_inputs.copy()
+                inputs_with_feedback["story_rating"] = story_rating
+                inputs_with_feedback["feedback_text"] = feedback_text
+                inputs_with_feedback["feedback_timestamp"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                log_story_run(
+                    version=st.session_state.story_result.get("version", "1.0"),
+                    inputs=inputs_with_feedback,
+                    prompt=st.session_state.story_result.get("prompt", ""),
+                    story=st.session_state.story_result["story"]
+                )
+                st.success("✅ Thank you for your feedback! Story and feedback logged successfully.")
+                
+                # Clear the session state after successful feedback
+                del st.session_state.story_result
+                del st.session_state.story_inputs
+                
+            except Exception as log_error:
+                st.error(f"❌ Feedback logging failed: {log_error}")
+        else:
+            st.warning("⚠️ Logging not available - feedback cannot be saved.")
 
 # Display current defaults for reference
 with st.expander("🔍 View Default Configuration"):

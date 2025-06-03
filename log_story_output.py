@@ -10,6 +10,7 @@ def log_story_run(version, inputs, prompt, story):
         "timestamp", "version", "child_name", "calculated_age", "date_of_birth", 
         "location_city", "location_country", "selected_books", "reading_time", 
         "emotional_themes", "event_preparation", "favourite_thing", 
+        "story_rating", "feedback_text", "feedback_timestamp",
         "prompt_length", "story_length", "prompt", "story"
     ]
     
@@ -63,6 +64,9 @@ def log_story_run(version, inputs, prompt, story):
                 "emotional_themes": emotional_themes_str,
                 "event_preparation": inputs.get("event_preparation", ""),
                 "favourite_thing": inputs.get("favourite_thing", ""),
+                "story_rating": inputs.get("story_rating", ""),
+                "feedback_text": inputs.get("feedback_text", ""),
+                "feedback_timestamp": inputs.get("feedback_timestamp", ""),
                 "prompt_length": len(prompt),
                 "story_length": len(story),
                 "prompt": prompt,  # Store full prompt for audit
