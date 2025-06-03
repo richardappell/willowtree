@@ -7,33 +7,65 @@ from create_story import create_story
 
 # Age-based book options from the storyboard
 BOOK_OPTIONS = {
+    "1-2": [
+        "Brown Bear, Brown Bear, What Do You See?",
+        "Goodnight Moon",
+        "The Very Hungry Caterpillar",
+        "Dear Zoo",
+        "That's Not My...",
+        "Peek-a-Boo!",
+        "First 100 Words",
+        "Where's Spot?",
+        "Incy Wincy Spider",
+        "Ten Little Fingers and Ten Little Toes"
+    ],
     "2-4": [
         "Guess How Much I Love You",
         "The Very Hungry Caterpillar", 
         "Dear Zoo",
         "Owl Babies",
-        "That's Not My..."
+        "That's Not My...",
+        "Each Peach Pear Plum",
+        "We're Going on a Bear Hunt",
+        "The Tiger Who Came to Tea",
+        "Hairy Maclary from Donaldson's Dairy",
+        "Rosie's Walk"
     ],
     "4-6": [
         "Room on the Broom",
         "We're Going on a Bear Hunt",
         "Where the Wild Things Are",
         "The Gruffalo",
-        "Stick Man"
+        "Stick Man",
+        "The Highway Rat",
+        "Superworm",
+        "Charlie and Lola",
+        "Elmer the Elephant",
+        "The Snowman"
     ],
     "6-8": [
         "Winnie-the-Pooh",
         "The Magic Faraway Tree",
         "Dog Man",
         "Zog",
-        "Isadora Moon"
+        "Isadora Moon",
+        "The BFG",
+        "Fantastic Mr Fox",
+        "Horrid Henry",
+        "The Worst Witch",
+        "Captain Underpants"
     ],
     "8-10+": [
         "Harry Potter",
         "How to Train Your Dragon",
         "The Witches",
         "Matilda",
-        "Percy Jackson"
+        "Percy Jackson",
+        "The Lion, the Witch and the Wardrobe",
+        "Wonder",
+        "Diary of a Wimpy Kid",
+        "Charlotte's Web",
+        "The Secret Garden"
     ]
 }
 
@@ -60,7 +92,9 @@ def get_age_from_dob(date_of_birth):
 
 def get_age_appropriate_books(age):
     """Return book options based on age"""
-    if age <= 4:
+    if age <= 2:
+        return BOOK_OPTIONS["1-2"]
+    elif age <= 4:
         return BOOK_OPTIONS["2-4"]
     elif age <= 6:
         return BOOK_OPTIONS["4-6"] 
@@ -88,7 +122,7 @@ except ImportError as e:
     LOGGING_AVAILABLE = False
 
 st.title("🌳 Willowtale Story Generator")
-st.markdown("*Stories to help them grow through what they go through.*")
+st.markdown("*Stories to help your child grow through what they go through.*")
 
 st.markdown("---")
 
