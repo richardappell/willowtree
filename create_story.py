@@ -2,13 +2,14 @@
 
 import os
 import httpx
+from log_story_output import log_story_run
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
 MODEL_NAME = "claude-3-haiku-20240307"
 
 def extract_version_and_prompt():
-    with open("prompt_templates/base_prompt.txt", "r") as f:
+    with open("base_prompt.txt", "r") as f:
         lines = f.readlines()
     version_line = lines[0]
     version = version_line.strip().replace("Version:", "").strip()
