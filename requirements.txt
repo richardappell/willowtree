@@ -2,3 +2,5 @@ streamlit
 requests
 python-dotenv
 httpx
+gspread>=5.7.0
+google-auth>=2.16.0

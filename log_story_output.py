@@ -2,10 +2,97 @@ import csv
 import os
 import json
 from datetime import datetime
+import streamlit as st
 
-CSV_FILE = "story_log.csv"
+# Google Sheets logging
+def log_to_google_sheets(version, inputs, prompt, story):
+    """Log story data to Google Sheets"""
+    try:
+        import gspread
+        from google.oauth2.service_account import Credentials
+        
+        # Get credentials from Streamlit secrets
+        credentials_dict = {
+            "type": st.secrets["gcp_service_account"]["type"],
+            "project_id": st.secrets["gcp_service_account"]["project_id"],
+            "private_key_id": st.secrets["gcp_service_account"]["private_key_id"],
+            "private_key": st.secrets["gcp_service_account"]["private_key"],
+            "client_email": st.secrets["gcp_service_account"]["client_email"],
+            "client_id": st.secrets["gcp_service_account"]["client_id"],
+            "auth_uri": st.secrets["gcp_service_account"]["auth_uri"],
+            "token_uri": st.secrets["gcp_service_account"]["token_uri"],
+            "auth_provider_x509_cert_url": st.secrets["gcp_service_account"]["auth_provider_x509_cert_url"],
+            "client_x509_cert_url": st.secrets["gcp_service_account"]["client_x509_cert_url"]
+        }
+        
+        # Set up credentials
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        credentials = Credentials.from_service_account_info(credentials_dict, scopes=scopes)
+        client = gspread.authorize(credentials)
+        
+        # Open the spreadsheet (you'll need to create this and share it with your service account)
+        spreadsheet_name = st.secrets.get("GOOGLE_SHEET_NAME", "Willowtale_Story_Logs")
+        sheet = client.open(spreadsheet_name).sheet1
+        
+        # Prepare row data
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Handle location data
+        location = inputs.get("location", {})
+        location_city = location.get("city", "") if isinstance(location, dict) else ""
+        location_country = location.get("country", "") if isinstance(location, dict) else ""
+        
+        # Handle emotional themes
+        emotional_themes = inputs.get("emotional_themes", [])
+        if isinstance(emotional_themes, list):
+            emotional_themes_str = ", ".join(emotional_themes)
+        else:
+            emotional_themes_str = str(emotional_themes)
+        
+        # Handle selected books
+        selected_books = inputs.get("selected_books", [])
+        selected_books_str = ", ".join(selected_books) if isinstance(selected_books, list) else str(selected_books)
+        
+        # Create row data
+        row_data = [
+            timestamp,
+            version,
+            inputs.get("child_name", ""),
+            inputs.get("calculated_age", ""),
+            inputs.get("date_of_birth", ""),
+            location_city,
+            location_country,
+            selected_books_str,
+            inputs.get("reading_time", ""),
+            emotional_themes_str,
+            inputs.get("event_preparation", ""),
+            inputs.get("favourite_thing", ""),
+            inputs.get("story_rating", ""),
+            inputs.get("feedback_text", ""),
+            inputs.get("feedback_timestamp", ""),
+            len(prompt),
+            len(story),
+            prompt[:1000] + "..." if len(prompt) > 1000 else prompt,  # Truncate for sheets
+            story[:2000] + "..." if len(story) > 2000 else story       # Truncate for sheets
+        ]
+        
+        # Add row to sheet
+        sheet.append_row(row_data)
+        
+        print("✅ Successfully logged to Google Sheets")
+        return True
+        
+    except Exception as e:
+        print(f"❌ Google Sheets logging failed: {e}")
+        return False
 
-def log_story_run(version, inputs, prompt, story):
+# CSV logging (fallback for local development)
+def log_to_csv(version, inputs, prompt, story):
+    """Fallback CSV logging for local development"""
+    CSV_FILE = "story_log.csv"
     headers = [
         "timestamp", "version", "child_name", "calculated_age", "date_of_birth", 
         "location_city", "location_country", "selected_books", "reading_time", 
@@ -14,32 +101,22 @@ def log_story_run(version, inputs, prompt, story):
         "prompt_length", "story_length", "prompt", "story"
     ]
     
-    print(f"🔍 Starting to log story...")
-    print(f"📁 CSV file path: {os.path.abspath(CSV_FILE)}")
-    print(f"📝 Inputs received: {inputs}")
-    
     try:
-        # Check if file exists
         file_exists = os.path.isfile(CSV_FILE)
-        print(f"📂 File exists: {file_exists}")
-        
-        # Create timestamp
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         
         with open(CSV_FILE, "a", newline='', encoding="utf-8") as csvfile:
             writer = csv.DictWriter(csvfile, fieldnames=headers)
 
             if not file_exists:
-                print(f"🆕 Creating new log file: {CSV_FILE}")
                 writer.writeheader()
-                print("✅ Header written")
 
             # Handle location data
             location = inputs.get("location", {})
             location_city = location.get("city", "") if isinstance(location, dict) else ""
             location_country = location.get("country", "") if isinstance(location, dict) else ""
             
-            # Handle emotional themes (could be list or string)
+            # Handle emotional themes
             emotional_themes = inputs.get("emotional_themes", [])
             if isinstance(emotional_themes, list):
                 emotional_themes_str = ", ".join(emotional_themes)
@@ -50,7 +127,6 @@ def log_story_run(version, inputs, prompt, story):
             selected_books = inputs.get("selected_books", [])
             selected_books_str = ", ".join(selected_books) if isinstance(selected_books, list) else str(selected_books)
             
-            # Prepare row data with all new fields
             row_data = {
                 "timestamp": timestamp,
                 "version": version,
@@ -69,43 +145,41 @@ def log_story_run(version, inputs, prompt, story):
                 "feedback_timestamp": inputs.get("feedback_timestamp", ""),
                 "prompt_length": len(prompt),
                 "story_length": len(story),
-                "prompt": prompt,  # Store full prompt for audit
-                "story": story    # Store full story for audit
+                "prompt": prompt,
+                "story": story
             }
             
-            print(f"📊 Row data prepared: {list(row_data.keys())}")
-            
             writer.writerow(row_data)
-            print("✅ Row written to file")
-
-        # Verify file was created/updated
-        if os.path.isfile(CSV_FILE):
-            file_size = os.path.getsize(CSV_FILE)
-            print(f"✅ Logged story to {CSV_FILE} (File size: {file_size} bytes)")
-            
-            # Read and show last few lines for verification
-            try:
-                with open(CSV_FILE, 'r', encoding='utf-8') as f:
-                    lines = f.readlines()
-                    print(f"📄 Total lines in file: {len(lines)}")
-                    if len(lines) > 0:
-                        print(f"📝 Last line written successfully")
-            except Exception as read_e:
-                print(f"⚠️ Could not read file for verification: {read_e}")
-        else:
-            print("❌ File was not created!")
-
-    except PermissionError as pe:
-        print(f"❌ Permission error: {pe}")
-        print("💡 Try running with administrator privileges or check file permissions")
+        
+        print(f"✅ Logged story to {CSV_FILE}")
+        return True
+        
     except Exception as e:
-        print(f"❌ Error logging story: {e}")
-        print(f"🔍 Error type: {type(e).__name__}")
-        import traceback
-        print(f"📚 Full traceback: {traceback.format_exc()}")
+        print(f"❌ CSV logging failed: {e}")
+        return False
 
+def log_story_run(version, inputs, prompt, story):
+    """Main logging function - tries Google Sheets first, falls back to CSV"""
+    
+    print(f"🔍 Starting to log story...")
+    print(f"📝 Inputs received: {inputs}")
+    
+    # Try Google Sheets first (for production)
+    try:
+        if 'gcp_service_account' in st.secrets:
+            success = log_to_google_sheets(version, inputs, prompt, story)
+            if success:
+                return
+    except Exception as e:
+        print(f"⚠️ Google Sheets not available: {e}")
+    
+    # Fallback to CSV (for local development)
+    log_to_csv(version, inputs, prompt, story)
+
+# Export function for analysis
 def export_logs_to_json(output_file="story_logs_export.json"):
     """Export CSV logs to JSON format for better data analysis"""
+    CSV_FILE = "story_log.csv"
     try:
         if not os.path.isfile(CSV_FILE):
             print(f"❌ No log file found at {CSV_FILE}")
@@ -147,39 +221,6 @@ def export_logs_to_json(output_file="story_logs_export.json"):
         print(f"❌ Error exporting logs: {e}")
         return None
 
-def get_log_summary():
-    """Get a summary of all logged stories"""
-    try:
-        if not os.path.isfile(CSV_FILE):
-            return {"error": "No log file found"}
-        
-        with open(CSV_FILE, 'r', encoding='utf-8') as csvfile:
-            reader = csv.DictReader(csvfile)
-            logs = list(reader)
-        
-        if not logs:
-            return {"total_stories": 0}
-        
-        # Calculate summary statistics
-        total_stories = len(logs)
-        versions = list(set(log['version'] for log in logs))
-        ages = [int(log['calculated_age']) for log in logs if log['calculated_age'] and log['calculated_age'].isdigit()]
-        reading_times = [log['reading_time'] for log in logs if log['reading_time']]
-        
-        summary = {
-            "total_stories": total_stories,
-            "versions_used": versions,
-            "age_range": {"min": min(ages), "max": max(ages)} if ages else None,
-            "most_common_reading_time": max(set(reading_times), key=reading_times.count) if reading_times else None,
-            "latest_story": logs[-1]['timestamp'] if logs else None,
-            "earliest_story": logs[0]['timestamp'] if logs else None
-        }
-        
-        return summary
-    
-    except Exception as e:
-        return {"error": str(e)}
-
 # Test function
 def test_logging():
     """Test the logging function with sample data"""
@@ -194,11 +235,14 @@ def test_logging():
         "reading_time": "bedtime",
         "emotional_themes": ["Starting school", "Making friends"],
         "event_preparation": "First day at reception",
-        "favourite_thing": "unicorns"
+        "favourite_thing": "unicorns",
+        "story_rating": 4,
+        "feedback_text": "Great story!",
+        "feedback_timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     }
     
     log_story_run(
-        version="test_v1.0",
+        version="test_v2.0",
         inputs=test_inputs,
         prompt="This is a test prompt for the new logging system",
         story="This is a test story with the updated format"
@@ -206,15 +250,3 @@ def test_logging():
 
 if __name__ == "__main__":
     test_logging()
-    
-    # Test export functionality
-    print("\n" + "="*50)
-    print("Testing export functionality...")
-    export_logs_to_json()
-    
-    # Show summary
-    print("\n" + "="*50)
-    print("Log Summary:")
-    summary = get_log_summary()
-    for key, value in summary.items():
-        print(f"{key}: {value}")
