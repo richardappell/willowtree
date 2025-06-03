@@ -7,7 +7,7 @@ from log_story_output import log_story_run
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-MODEL_NAME = "claude-3-haiku-20240307"
+MODEL_NAME = "claude-3-5-sonnet-20241022"  # Faster and better than Haiku for this task
 
 def extract_version_and_prompt():
     with open("base_prompt.txt", "r") as f:
@@ -73,17 +73,42 @@ USER INPUTS:
 
     body = {
         "model": MODEL_NAME,
-        "max_tokens": 1024,
-        "temperature": 0.7,
+        "max_tokens": 2048,  # Increased for longer stories
+        "temperature": 0.8,   # Slightly higher for more creativity
         "messages": [
             {"role": "user", "content": prompt}
         ]
     }
 
-    response = httpx.post(ANTHROPIC_URL, headers=headers, json=body)
-    response.raise_for_status()
+    try:
+        # Increase timeout for longer story generation
+        response = httpx.post(ANTHROPIC_URL, headers=headers, json=body, timeout=60.0)
+        response.raise_for_status()
+        
+        story_text = response.json()["content"][0]["text"]
+        
+    except httpx.TimeoutException:
+        # Retry with shorter prompt if timeout occurs
+        shorter_prompt = f"""{prompt_template}
 
-    story_text = response.json()["content"][0]["text"]
+USER INPUTS:
+- Child's name: {child_name}
+- Age: {child_age}
+- Location: {location_str}
+- Reading time: {reading_time}
+- Emotional themes: {themes_str}
+- Event preparation: {event_str}
+
+Create a magical story for this child focusing on joy and wonder.
+"""
+        
+        body["messages"] = [{"role": "user", "content": shorter_prompt}]
+        response = httpx.post(ANTHROPIC_URL, headers=headers, json=body, timeout=90.0)
+        response.raise_for_status()
+        story_text = response.json()["content"][0]["text"]
+        
+    except Exception as e:
+        raise Exception(f"Story generation failed: {str(e)}")
 
     return {
         "version": version,
