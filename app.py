@@ -263,20 +263,21 @@ if st.button("✨ Create Story", type="primary", use_container_width=True):
                     "favourite_thing": favourite_thing
                 }
                 
-                # Display the story
-                st.markdown("### 📖 Your personalized story:")
-                st.markdown("---")
-                st.write(result["story"])
-                st.markdown("---")
-                
             except Exception as e:
                 st.error(f"❌ Error generating story: {e}")
 
-# Feedback Section (only show if story has been generated)
+# Display story and feedback section (outside the button conditional)
 if 'story_result' in st.session_state:
+    # Display the story
     st.markdown("---")
+    st.markdown("### 📖 Your personalized story:")
+    st.markdown("---")
+    st.write(st.session_state.story_result["story"])
+    st.markdown("---")
+    
+    # Feedback Section
     st.header("📝 Share Your Feedback")
-    st.markdown(f"*How did {child_name or 'your child'} like this story?*")
+    st.markdown(f"*How did {st.session_state.story_inputs.get('child_name', 'your child')} like this story?*")
     
     col1, col2 = st.columns([1, 2])
     
@@ -315,6 +316,9 @@ if 'story_result' in st.session_state:
                 # Clear the session state after successful feedback
                 del st.session_state.story_result
                 del st.session_state.story_inputs
+                
+                # Force a rerun to clear the display
+                st.rerun()
                 
             except Exception as log_error:
                 st.error(f"❌ Feedback logging failed: {log_error}")
