@@ -40,7 +40,7 @@ def log_story_run(version, inputs, prompt, story):
                 "tone": inputs.get("tone", ""),
                 "favourite_thing": inputs.get("favourite_thing", ""),
                 "selected_books": ", ".join(inputs.get("selected_books", [])) if inputs.get("selected_books") else "",
-                "prompt": prompt[:100] + "..." if len(prompt) > 100 else prompt,  # Truncate long prompts
+                "prompt": prompt[:100] + "..." if len(prompt) > 10000 else prompt,  # Truncate long prompts
                 "story": story[:10000] + "..." if len(story) > 10000 else story  # Truncate long stories
             }
             
