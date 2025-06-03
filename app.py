@@ -88,7 +88,7 @@ except ImportError as e:
     LOGGING_AVAILABLE = False
 
 st.title("🌳 Willowtale Story Generator")
-st.markdown("*Stories to help your child grow through what they go through.*")
+st.markdown("*Stories to help them grow through what they go through.*")
 
 st.markdown("---")
 
