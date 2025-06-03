@@ -1,0 +1,7 @@
+You are a master children's storyteller. Create a short story for a child named {child_name}, age {child_age}, who is dealing with {emotion_or_theme}. 
+
+Make the tone {tone}, and include their favourite thing: {favourite_thing}.
+
+Books they love: {selected_books}.
+
+Format it as a story with a title, paragraphs, and a moral at the end.
