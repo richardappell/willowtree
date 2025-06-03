@@ -1,8 +1,20 @@
 {
-  "child_name": "Lina",
-  "child_age": 6,
-  "situation": "starting school",
-  "tone": "warm and encouraging",
-  "favourite_thing": "ladybirds",
-  "selected_books": ["The Gruffalo", "We're Going on a Bear Hunt"]
+  "child_name": "Emma",
+  "date_of_birth": "2019-03-15",
+  "location": {
+    "city": "London",
+    "country": "United Kingdom"
+  },
+  "selected_books": [
+    "Room on the Broom",
+    "The Gruffalo",
+    "We're Going on a Bear Hunt"
+  ],
+  "reading_time": "bedtime",
+  "emotional_themes": [
+    "Starting school",
+    "Making friends"
+  ],
+  "event_preparation": "First day at reception class next week",
+  "favourite_thing": "unicorns"
 }

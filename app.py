@@ -2,7 +2,72 @@
 
 import streamlit as st
 import json
+from datetime import date, datetime
 from create_story import create_story
+
+# Age-based book options from the storyboard
+BOOK_OPTIONS = {
+    "2-4": [
+        "Guess How Much I Love You",
+        "The Very Hungry Caterpillar", 
+        "Dear Zoo",
+        "Owl Babies",
+        "That's Not My..."
+    ],
+    "4-6": [
+        "Room on the Broom",
+        "We're Going on a Bear Hunt",
+        "Where the Wild Things Are",
+        "The Gruffalo",
+        "Stick Man"
+    ],
+    "6-8": [
+        "Winnie-the-Pooh",
+        "The Magic Faraway Tree",
+        "Dog Man",
+        "Zog",
+        "Isadora Moon"
+    ],
+    "8-10+": [
+        "Harry Potter",
+        "How to Train Your Dragon",
+        "The Witches",
+        "Matilda",
+        "Percy Jackson"
+    ]
+}
+
+EMOTIONAL_THEMES = [
+    "Coping with loss",
+    "Moving house or school",
+    "Feeling anxious or scared",
+    "Low confidence",
+    "Big feelings or tantrums",
+    "Starting school",
+    "Making friends",
+    "Learning empathy",
+    "A new baby is arriving",
+    "Night-time fears"
+]
+
+def get_age_from_dob(date_of_birth):
+    """Calculate age from date of birth"""
+    if not date_of_birth:
+        return 0
+    today = date.today()
+    age = today.year - date_of_birth.year - ((today.month, today.day) < (date_of_birth.month, date_of_birth.day))
+    return age
+
+def get_age_appropriate_books(age):
+    """Return book options based on age"""
+    if age <= 4:
+        return BOOK_OPTIONS["2-4"]
+    elif age <= 6:
+        return BOOK_OPTIONS["4-6"] 
+    elif age <= 8:
+        return BOOK_OPTIONS["6-8"]
+    else:
+        return BOOK_OPTIONS["8-10+"]
 
 # Load default inputs
 try:
@@ -22,54 +87,152 @@ except ImportError as e:
     st.write(f"⚠️ Could not import logging function: {e}")
     LOGGING_AVAILABLE = False
 
-st.title("Willowtale Story Generator Demo")
+st.title("🌳 Willowtale Story Generator")
+st.markdown("*Stories to help your child grow through what they go through.*")
 
-st.markdown("""
-Fill in the details below to generate a personalised story for your child.
-""")
+st.markdown("---")
 
-# Use defaults from JSON file
-child_name = st.text_input("Child's name", value=defaults.get("child_name", ""))
-child_age = st.number_input("Child's age", min_value=0, max_value=18, value=defaults.get("child_age", 5))
-emotion_or_theme = st.text_input("Situation/Theme", value=defaults.get("situation", ""))  # Changed label to match JSON
-tone = st.text_input("Tone", value=defaults.get("tone", "magical"))
-favourite_thing = st.text_input("Favourite thing (optional)", value=defaults.get("favourite_thing", ""))
+# Child Details Section
+st.header("👶 Who are we writing for?")
 
-# Handle selected_books from JSON
-default_books = ", ".join(defaults.get("selected_books", []))
-selected_books_raw = st.text_input("Selected books (comma-separated, optional)", value=default_books)
+col1, col2 = st.columns(2)
+with col1:
+    child_name = st.text_input("Child's name", value=defaults.get("child_name", ""))
 
-selected_books = [b.strip() for b in selected_books_raw.split(",") if b.strip()]
+with col2:
+    # Handle date of birth from defaults
+    default_dob = None
+    if defaults.get("date_of_birth"):
+        try:
+            default_dob = datetime.strptime(defaults["date_of_birth"], "%Y-%m-%d").date()
+        except:
+            pass
+    
+    date_of_birth = st.date_input(
+        "Date of birth", 
+        value=default_dob,
+        min_value=date(2010, 1, 1),
+        max_value=date.today()
+    )
 
-if st.button("Generate Story"):
-    if not child_name or not emotion_or_theme or not tone:
-        st.error("Please fill in the required fields: Child's name, Situation/Theme, Tone.")
+col3, col4 = st.columns(2)
+with col3:
+    city = st.text_input("City", value=defaults.get("location", {}).get("city", ""))
+with col4:
+    country = st.text_input("Country", value=defaults.get("location", {}).get("country", ""))
+
+# Calculate age and show appropriate books
+if date_of_birth:
+    calculated_age = get_age_from_dob(date_of_birth)
+    st.info(f"Age: {calculated_age} years old")
+    
+    # Book Selection Section
+    st.header("📚 What kinds of stories do you both love?")
+    st.markdown(f"*Select up to 5 books you love reading with {child_name or 'your child'}. This helps us understand your preferred storytelling style.*")
+    
+    age_appropriate_books = get_age_appropriate_books(calculated_age)
+    default_selected = defaults.get("selected_books", [])
+    
+    selected_books = st.multiselect(
+        "Choose books (max 5)",
+        options=age_appropriate_books,
+        default=[book for book in default_selected if book in age_appropriate_books],
+        max_selections=5
+    )
+    
+    st.caption("💡 *We use these to understand tone and style - we won't copy these stories!*")
+else:
+    selected_books = []
+    calculated_age = 0
+
+st.markdown("---")
+
+# Reading Time Section
+st.header("⏰ When do you read stories together?")
+reading_time = st.radio(
+    "Reading time",
+    options=["morning", "daytime", "bedtime"],
+    index=["morning", "daytime", "bedtime"].index(defaults.get("reading_time", "bedtime")),
+    horizontal=True
+)
+
+st.markdown("---")
+
+# Story Purpose Section
+st.header("💙 What do you hope stories can help with?")
+st.markdown(f"*Sometimes stories say what we can't. What does {child_name or 'your child'} need right now?*")
+
+# Event Preparation
+event_preparation = st.text_input(
+    "Is there a specific event to prepare for? (optional)",
+    value=defaults.get("event_preparation", ""),
+    placeholder="e.g., starting nursery, visiting grandparents, doctor's appointment"
+)
+
+# Emotional Themes
+default_themes = defaults.get("emotional_themes", [])
+emotional_themes = st.multiselect(
+    "Select emotional themes to address (choose 1-2)",
+    options=EMOTIONAL_THEMES,
+    default=default_themes,
+    max_selections=2
+)
+
+# Other custom theme
+custom_theme = st.text_input("Something else? (optional)", placeholder="Describe in your own words...")
+if custom_theme:
+    emotional_themes.append(custom_theme)
+
+# Optional Details
+with st.expander("Additional details (optional)"):
+    favourite_thing = st.text_input(
+        "Favourite thing", 
+        value=defaults.get("favourite_thing", ""),
+        placeholder="e.g., dinosaurs, princesses, trains"
+    )
+
+st.markdown("---")
+
+# Generate Story Button
+if st.button("✨ Create Story", type="primary", use_container_width=True):
+    if not child_name or not date_of_birth or not emotional_themes:
+        st.error("Please fill in: Child's name, date of birth, and at least one emotional theme.")
     else:
-        with st.spinner("Generating story..."):
+        with st.spinner("Creating your personalized story... ✨"):
             try:
+                location = {"city": city, "country": country}
+                
                 result = create_story(
                     child_name=child_name,
-                    child_age=child_age,
-                    emotion_or_theme=emotion_or_theme,
-                    tone=tone,
-                    favourite_thing=favourite_thing,
-                    selected_books=selected_books
+                    date_of_birth=date_of_birth.strftime("%Y-%m-%d"),
+                    location=location,
+                    selected_books=selected_books,
+                    reading_time=reading_time,
+                    emotional_themes=emotional_themes,
+                    event_preparation=event_preparation,
+                    favourite_thing=favourite_thing
                 )
                 
-                st.subheader("Your personalised story:")
+                st.success("✅ Story created successfully!")
+                
+                # Display the story
+                st.markdown("### 📖 Your personalized story:")
+                st.markdown("---")
                 st.write(result["story"])
-                st.success("Story generated successfully!")
+                st.markdown("---")
                 
                 # Log the story generation
                 if LOGGING_AVAILABLE:
-                    st.write("📝 Attempting to log story...")
                     inputs = {
                         "child_name": child_name,
-                        "child_age": child_age,
-                        "emotion_or_theme": emotion_or_theme,
-                        "tone": tone,
-                        "favourite_thing": favourite_thing,
-                        "selected_books": selected_books
+                        "date_of_birth": date_of_birth.strftime("%Y-%m-%d"),
+                        "calculated_age": result.get("calculated_age", calculated_age),
+                        "location": location,
+                        "selected_books": selected_books,
+                        "reading_time": reading_time,
+                        "emotional_themes": emotional_themes,
+                        "event_preparation": event_preparation,
+                        "favourite_thing": favourite_thing
                     }
                     
                     try:
@@ -79,17 +242,13 @@ if st.button("Generate Story"):
                             prompt=result.get("prompt", ""),
                             story=result["story"]
                         )
-                        st.success("✅ Story logged to CSV successfully!")
+                        st.success("📝 Story logged successfully!")
                     except Exception as log_error:
                         st.error(f"❌ Logging failed: {log_error}")
-                        st.write(f"Error details: {str(log_error)}")
-                else:
-                    st.warning("Logging is not available")
                 
             except Exception as e:
-                st.error(f"Error generating story: {e}")
-                st.write(f"Error details: {str(e)}")
+                st.error(f"❌ Error generating story: {e}")
 
 # Display current defaults for reference
-with st.expander("View Default Inputs"):
+with st.expander("🔍 View Default Configuration"):
     st.json(defaults)
