@@ -1,40 +1,49 @@
 import os
 import httpx
-from dotenv import load_dotenv
 
-load_dotenv()
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+MODEL_NAME = "claude-3-haiku-20240307"
 
-def create_story(inputs, prompt_template_path="prompt_templates/base_prompt.txt"):
-    with open(prompt_template_path, "r") as file:
-        prompt_template = file.read()
+def extract_version_and_prompt():
+    with open("prompt_templates/base_prompt.txt", "r") as f:
+        lines = f.readlines()
+    version_line = lines[0]
+    version = version_line.strip().replace("Version:", "").strip()
+    prompt_text = "".join(lines[1:]).strip()
+    return version, prompt_text
 
-    prompt = prompt_template.format(
-        child_name=inputs["child_name"],
-        child_age=inputs["child_age"],
-        emotion_or_theme=inputs["emotion_or_theme"],
-        tone=inputs["tone"],
-        favourite_thing=inputs["favourite_thing"],
-        selected_books=", ".join(inputs["selected_books"])
-    )
+def create_story(user_inputs):
+    version, prompt_template = extract_version_and_prompt()
+    
+    full_prompt = f"""{prompt_template}
 
-    # Send to Claude (Haiku)
-    api_key = os.getenv("ANTHROPIC_API_KEY")
+USER INPUTS:
+- Child's name: {user_inputs['child_name']}
+- Age: {user_inputs['child_age']}
+- Situation: {user_inputs['situation']}
+- Emotional tone: {user_inputs['tone']}
+- Favourite books: {', '.join(user_inputs['selected_books'])}
+"""
+
     headers = {
-        "x-api-key": api_key,
+        "x-api-key": ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json"
     }
 
     body = {
-        "model": "claude-3-haiku-20240307",
-        "max_tokens": 800,
+        "model": MODEL_NAME,
+        "max_tokens": 1024,
         "temperature": 0.7,
         "messages": [
-            {"role": "user", "content": prompt}
+            {"role": "user", "content": full_prompt}
         ]
     }
 
-    response = httpx.post("https://api.anthropic.com/v1/messages", headers=headers, json=body)
+    response = httpx.post(ANTHROPIC_URL, headers=headers, json=body)
     response.raise_for_status()
 
-    return response.json()["content"][0]["text"]
+    story_text = response.json()["content"][0]["text"]
+
+    return version, full_prompt, story_text
